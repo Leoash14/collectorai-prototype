@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CollectorAI</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom right, #e0f7fa, #f1f8e9);
+      padding: 2em;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: #00695c;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 2em;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    input[type="file"] {
+      margin: 1em 0;
+      padding: 0.5em;
+    }
+
+    button {
+      background-color: #26a69a;
+      color: white;
+      border: none;
+      padding: 0.7em 1.2em;
+      margin-top: 1em;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #00796b;
+    }
+
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 1em;
+      margin: 1em 0;
+      background-color: #f9fbe7;
+    }
+
+    .card img {
+      max-width: 100px;
+      border-radius: 8px;
+      margin-right: 10px;
+    }
+
+    .item-info {
+      display: flex;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>CollectorAI</h1>
+  <div class="container">
+    <input type="file" id="upload" accept="image/*" capture="environment" />
+    <button onclick="identify()">Identify Item</button>
+
+    <div id="result"></div>
+    <hr />
+    <button onclick="viewCollection()">View My Collection</button>
+    <div id="collection"></div>
+    <canvas id="priceChart" width="400" height="200"></canvas>
+  </div>
+
+  <script>
+    let currentItem = null;
+
+    async function identify() {
+      const fileInput = document.getElementById('upload');
+      const file = fileInput.files[0];
+      if (!file) return alert("Please upload an image!");
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const uploadedImageURL = URL.createObjectURL(file);
+
+      const res = await fetch('http://localhost:5000/api/identify', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      const div = document.getElementById('result');
+
+      if (data.match) {
+        currentItem = data.match;
+        currentItem.imageURL = uploadedImageURL;
+
+        div.innerHTML = `
+          <img src="${uploadedImageURL}" style="max-width: 150px; border-radius: 8px; margin-bottom: 10px;" />
+          <h2>${data.match.name}</h2>
+          <p><strong>Category:</strong> ${data.match.category}</p>
+          <p><strong>Rarity:</strong> ${data.match.rarity}</p>
+          <p><strong>Estimated Value:</strong> ${data.match.estimated_value}</p>
+          <button onclick="saveToCollection()">Save to My Collection</button>
+        `;
+      } else {
+        div.innerHTML = 'No match found.';
+      }
+    }
+
+    async function saveToCollection() {
+      if (!currentItem) return;
+      const res = await fetch('http://localhost:5000/api/collection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentItem)
+      });
+      alert('Item saved to collection!');
+    }
+
+    async function viewCollection() {
+      const res = await fetch('http://localhost:5000/api/collection');
+      const items = await res.json();
+      const container = document.getElementById('collection');
+      container.innerHTML = '';
+
+      items.forEach(async item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        card.innerHTML = `
+          <div class="item-info">
+            <img src="reference_images/${item.image}" />
+            <div>
+              <h3>${item.name}</h3>
+              <p>${item.rarity} – ${item.estimated_value}</p>
+              <button onclick="deleteItem('${item.id}')">Delete</button>
+              <button onclick="loadPriceChart('${item.id}')">View Price Chart</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    async function deleteItem(itemId) {
+      await fetch(`http://localhost:5000/api/collection/${itemId}`, {
+        method: 'DELETE'
+      });
+      viewCollection();
+    }
+
+    async function loadPriceChart(itemId) {
+      const res = await fetch(`http://localhost:5000/api/price_history/${itemId}`);
+      const data = await res.json();
+
+      const labels = data.map(p => p.date);
+      const values = data.map(p => parseInt(p.value.replace(/[^\d]/g, '')) || 0);
+
+      const ctx = document.getElementById('priceChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Price Trend',
+            data: values,
+            borderColor: '#26a69a',
+            borderWidth: 2,
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

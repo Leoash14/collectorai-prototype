@@ -1,0 +1,27 @@
+[
+    {
+      "id": "mazda-cosmo",
+      "name": "Hot Wheels 1968 Mazda Cosmo Sport",
+      "category": "Hot Wheels",
+      "rarity": "Very Rare",
+      "estimated_value": "rs3000",
+      "image": "mazda.jpg"
+    },
+    {
+      "id": "mercedes-f1",
+      "name": "Hot Wheels Mercedes-AMG Petronas F1 Team (2025)",
+      "category": "Hot Wheels",
+      "rarity": "Rare",
+      "estimated_value": "rs1000",
+      "image": "mercedes.jpg"
+    },
+    {
+      "id": "nike-paris",
+      "name": "Nike Dunk Low Pro SB 'Paris'",
+      "category": "Sneakers",
+      "rarity": "Ultra Rare",
+      "estimated_value": "rs267,000",
+      "image": "paris.jpg"
+    }
+  ]
+  
